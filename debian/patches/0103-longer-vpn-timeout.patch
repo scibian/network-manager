@@ -1,0 +1,13 @@
+Index: NetworkManager-0.9.10.0/src/vpn-manager/nm-vpn-service.c
+===================================================================
+--- NetworkManager-0.9.10.0.orig/src/vpn-manager/nm-vpn-service.c	2014-07-04 02:44:13.000000000 +0200
++++ NetworkManager-0.9.10.0/src/vpn-manager/nm-vpn-service.c	2015-08-18 13:51:51.881617790 +0200
+@@ -211,7 +211,7 @@
+ 	if (success) {
+ 		nm_log_info (LOGD_VPN, "VPN service '%s' started (%s), PID %ld",
+ 		             priv->name, priv->dbus_service, (long int) pid);
+-		priv->start_timeout = g_timeout_add_seconds (5, _daemon_exec_timeout, service);
++		priv->start_timeout = g_timeout_add_seconds (30, _daemon_exec_timeout, service);
+ 	} else {
+ 		nm_log_warn (LOGD_VPN, "VPN service '%s': could not launch the VPN service. error: (%d) %s.",
+ 		             priv->name,

@@ -1016,6 +1016,42 @@ has_system_secrets (NMConnection *connection)
 	return has_system;
 }
 
+static gboolean
+has_existing_secrets (ConnectionRequest *req)
+{
+	GHashTableIter iter;
+	gpointer key, value;
+	GHashTable *vpn_secrets;
+
+	if ( ! req->existing_secrets)
+		return FALSE;
+	
+	/* iterate over the existing secrets hash */
+	g_hash_table_iter_init(&iter, req->existing_secrets);
+	while (g_hash_table_iter_next(&iter, &key, &value))
+	{
+		/* a VPN entry doesn't always mean we really have secrets */
+		if (strcmp(key, "vpn") == 0)
+		{
+			vpn_secrets = g_hash_table_lookup(value, "secrets");
+			if ( ! vpn_secrets)
+				continue;
+			if (g_hash_table_size(vpn_secrets) > 0)
+				return TRUE;
+		}
+		/* same for 802-11-wireless */
+		else if (strcmp(key, "802-11-wireless") == 0)
+		{
+			if(g_hash_table_size(value) > 0)
+				return TRUE;
+		}
+		else
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
 static void
 get_next_cb (Request *parent)
 {
@@ -1034,7 +1070,7 @@ get_next_cb (Request *parent)
 	 * unprivileged users.
 	 */
 	if (   (req->flags != NM_SETTINGS_GET_SECRETS_FLAG_NONE)
-	    && (req->existing_secrets || has_system_secrets (req->connection))) {
+	    && (has_existing_secrets(req) || has_system_secrets (req->connection))) {
 		nm_log_dbg (LOGD_AGENTS, "(%p/%s/%s) request has system secrets; checking agent %s for MODIFY",
 		            req, parent->detail, req->setting_name, agent_dbus_owner);
 

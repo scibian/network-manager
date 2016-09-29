@@ -18,3 +18,8 @@
 0018-core-do-not-assert-when-a-device-is-enslaved-externa.patch
 0019-Don-t-make-NetworkManager-D-Bus-activatable.patch
 0020-Don-t-block-network.target-on-NetworkManager-wait-on.patch
+0100-wifi-pkcs11-support.patch
+0101-wifi-vpn-dont-ask-root-password-when-not-needed.patch
+0102-disable-gsm-connection-fitness-check.patch
+0103-longer-vpn-timeout.patch
+0104-disable-ifindex-value-check.patch

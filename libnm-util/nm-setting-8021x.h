@@ -127,6 +127,12 @@ GQuark nm_setting_802_1x_error_quark (void);
 #define NM_SETTING_802_1X_PIN "pin"
 #define NM_SETTING_802_1X_PIN_FLAGS "pin-flags"
 #define NM_SETTING_802_1X_SYSTEM_CA_CERTS "system-ca-certs"
+#define NM_SETTING_802_1X_ENGINE "engine"
+#define NM_SETTING_802_1X_KEY_ID "key-id"
+#define NM_SETTING_802_1X_CERT_ID "cert-id"
+#define NM_SETTING_802_1X_CA_CERT_ID "ca-cert-id"
+#define NM_SETTING_802_1X_PKCS11_ENGINE_PATH "pkcs11-engine-path"
+#define NM_SETTING_802_1X_PKCS11_MODULE_PATH "pkcs11-module-path"
 
 /* PRIVATE KEY NOTE: when setting PKCS#12 private keys directly via properties
  * using the "blob" scheme, the data must be passed in PKCS#12 binary format.
@@ -146,6 +152,10 @@ GQuark nm_setting_802_1x_error_quark (void);
  *
  * When using the "path" scheme, just set the private-key and client-cert
  * properties to the paths to their respective objects.
+ *
+ * Do not set a private key when using the PKCS #11 OpenSSL engine. Depending
+ * on the active PKCS #11 module, the "key-id" property might be required to
+ * specify which private key to use.
  */
 
 typedef struct {
@@ -293,6 +303,13 @@ const char *           nm_setting_802_1x_get_phase2_private_key_password (NMSett
 NMSettingSecretFlags   nm_setting_802_1x_get_phase2_private_key_password_flags (NMSetting8021x *setting);
 
 NMSetting8021xCKFormat nm_setting_802_1x_get_phase2_private_key_format   (NMSetting8021x *setting);
+
+gboolean          nm_setting_802_1x_get_engine                       (NMSetting8021x *setting);
+const char *      nm_setting_802_1x_get_key_id                       (NMSetting8021x *setting);
+const char *      nm_setting_802_1x_get_cert_id                      (NMSetting8021x *setting);
+const char *      nm_setting_802_1x_get_ca_cert_id                   (NMSetting8021x *setting);
+const char *      nm_setting_802_1x_get_pkcs11_engine_path           (NMSetting8021x *setting);
+const char *      nm_setting_802_1x_get_pkcs11_module_path           (NMSetting8021x *setting);
 
 
 G_END_DECLS

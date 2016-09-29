@@ -1,3 +1,13 @@
+network-manager (0.9.10.0-7scibian1) jessie; urgency=medium
+
+  * Patches for strongswan VPN.
+  * Patch to make GSM connections to work as they should.
+  * Not create default wired connections.
+  * Not manage VMware network interfaces.
+  * PKCS11 WiFi support.
+
+ -- Scibian Packaging Team <packaging@scibian.org>  Thu, 29 Sep 2016 10:02:15 +0200
+
 network-manager (0.9.10.0-7) unstable; urgency=medium
 
   * Don't make NetworkManager D-Bus activatable. If the daemon has been

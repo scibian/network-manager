@@ -1,0 +1,19 @@
+Index: NetworkManager-0.9.10.0/src/vpn-manager/nm-vpn-connection.c
+===================================================================
+--- NetworkManager-0.9.10.0.orig/src/vpn-manager/nm-vpn-connection.c	2015-08-18 14:03:27.285500357 +0200
++++ NetworkManager-0.9.10.0/src/vpn-manager/nm-vpn-connection.c	2015-08-18 14:05:11.879891460 +0200
+@@ -957,11 +957,11 @@
+ 	if (priv->ip_iface) {
+ 		/* Grab the interface index for address/routing operations */
+ 		priv->ip_ifindex = nm_platform_link_get_ifindex (priv->ip_iface);
+-		if (!priv->ip_ifindex) {
+-			nm_log_err (LOGD_VPN, "(%s): failed to look up VPN interface index", priv->ip_iface);
++		/*if (priv->ip_ifindex <= 0) {
++			nm_log_warn (LOGD_VPN, "(%s): failed to look up VPN interface index", priv->ip_iface);
+ 			nm_vpn_connection_config_maybe_complete (connection, FALSE);
+ 			return FALSE;
+-		}
++		}*/
+ 	}
+ 
+ 	g_clear_pointer (&priv->banner, g_free);

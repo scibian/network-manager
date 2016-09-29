@@ -1,0 +1,26 @@
+Index: NetworkManager-0.9.10.0/src/devices/nm-device.c
+===================================================================
+--- NetworkManager-0.9.10.0.orig/src/devices/nm-device.c	2015-08-18 11:44:22.763413948 +0200
++++ NetworkManager-0.9.10.0/src/devices/nm-device.c	2015-08-18 11:44:22.847415872 +0200
+@@ -6079,6 +6079,7 @@
+ {
+ 	NMDevicePrivate *priv = NM_DEVICE_GET_PRIVATE (device);
+ 	gboolean available = FALSE;
++	NMSettingConnection *s_con;
+ 
+ 	if (nm_device_get_default_unmanaged (device) && (priv->state == NM_DEVICE_STATE_UNMANAGED)) {
+ 		/* default-unmanaged  devices in UNMANAGED state have no available connections
+@@ -6101,6 +6102,13 @@
+ 			available = NM_DEVICE_GET_CLASS (device)->check_connection_available_wifi_hidden (device, connection);
+ 	}
+ 
++	/* Calibre temporary bug fix: for some reason GSM modems never accept a connecton once it's been
++	   saved to disk and loaded again. So let's just accept any GSM connection for any GSM device.
++	   Anyway there is no real means of verifying if a GSM connection fits a modem without launching it. */
++	s_con = nm_connection_get_setting_connection (connection);
++	if (g_str_equal (nm_setting_connection_get_connection_type (s_con), NM_SETTING_GSM_SETTING_NAME))
++		return TRUE;
++
+ 	return available;
+ }
+ 

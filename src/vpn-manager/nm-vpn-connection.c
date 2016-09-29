@@ -957,11 +957,11 @@ process_generic_config (NMVPNConnection *connection,
 	if (priv->ip_iface) {
 		/* Grab the interface index for address/routing operations */
 		priv->ip_ifindex = nm_platform_link_get_ifindex (priv->ip_iface);
-		if (!priv->ip_ifindex) {
-			nm_log_err (LOGD_VPN, "(%s): failed to look up VPN interface index", priv->ip_iface);
+		/*if (priv->ip_ifindex <= 0) {
+			nm_log_warn (LOGD_VPN, "(%s): failed to look up VPN interface index", priv->ip_iface);
 			nm_vpn_connection_config_maybe_complete (connection, FALSE);
 			return FALSE;
-		}
+		}*/
 	}
 
 	g_clear_pointer (&priv->banner, g_free);

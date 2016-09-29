@@ -24,6 +24,7 @@
  */
 
 #include <string.h>
+#include <sys/stat.h>
 #include <dbus/dbus-glib.h>
 #include <glib/gi18n.h>
 
@@ -125,6 +126,12 @@ typedef struct {
 	char *phase2_private_key_password;
 	NMSettingSecretFlags phase2_private_key_password_flags;
 	gboolean system_ca_certs;
+	gboolean engine;
+	char *key_id;
+	char *cert_id;
+	char *ca_cert_id;
+	char *pkcs11_engine_path;
+	char *pkcs11_module_path;
 } NMSetting8021xPrivate;
 
 enum {
@@ -148,6 +155,8 @@ enum {
 	PROP_PHASE2_SUBJECT_MATCH,
 	PROP_PHASE2_ALTSUBJECT_MATCHES,
 	PROP_PHASE2_CLIENT_CERT,
+	PROP_PIN,
+	PROP_PIN_FLAGS,
 	PROP_PASSWORD,
 	PROP_PASSWORD_FLAGS,
 	PROP_PASSWORD_RAW,
@@ -158,9 +167,13 @@ enum {
 	PROP_PHASE2_PRIVATE_KEY,
 	PROP_PHASE2_PRIVATE_KEY_PASSWORD,
 	PROP_PHASE2_PRIVATE_KEY_PASSWORD_FLAGS,
-	PROP_PIN,
-	PROP_PIN_FLAGS,
 	PROP_SYSTEM_CA_CERTS,
+	PROP_ENGINE,
+	PROP_KEY_ID,
+	PROP_CERT_ID,
+	PROP_CA_CERT_ID,
+	PROP_PKCS11_ENGINE_PATH,
+	PROP_PKCS11_MODULE_PATH,
 
 	LAST_PROP
 };
@@ -1600,7 +1613,7 @@ nm_setting_802_1x_get_pin (NMSetting8021x *setting)
 NMSettingSecretFlags
 nm_setting_802_1x_get_pin_flags (NMSetting8021x *setting)
 {
-	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NM_SETTING_SECRET_FLAG_NONE);
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NM_SETTING_SECRET_FLAG_NOT_REQUIRED);
 
 	return NM_SETTING_802_1X_GET_PRIVATE (setting)->pin_flags;
 }
@@ -2181,6 +2194,107 @@ nm_setting_802_1x_get_phase2_private_key_format (NMSetting8021x *setting)
 	return NM_SETTING_802_1X_CK_FORMAT_UNKNOWN;
 }
 
+/**
+ * nm_setting_802_1x_get_engine:
+ * @setting: The #NMSetting8021x
+ *
+ * Gets the #NMSetting8021x:engine property.
+ *
+ * Returns: TRUE if the OpenSSL engine should be used, FALSE if not
+ **/
+gboolean
+nm_setting_802_1x_get_engine (NMSetting8021x *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), FALSE);
+
+	return NM_SETTING_802_1X_GET_PRIVATE (setting)->engine;
+}
+
+/**
+ * nm_setting_802_1x_get_key_id:
+ * @setting: the #NMSetting8021x
+ *
+ * Gets the #NMSetting8021x:key-id property.
+ *
+ * Returns: Key identifier for the OpenSSL engine to use if
+ * #NMSetting8021x:engine is set to TRUE
+ **/
+const char *
+nm_setting_802_1x_get_key_id (NMSetting8021x *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NULL);
+
+	return (const char *) (NM_SETTING_802_1X_GET_PRIVATE (setting)->key_id);
+}
+
+/**
+ * nm_setting_802_1x_get_cert_id:
+ * @setting: the #NMSetting8021x
+ *
+ * Gets the #NMSetting8021x:cert-id property.
+ *
+ * Returns: Certificate identifier for the OpenSSL engine to use if
+ * #NMSetting8021x:engine is set to TRUE
+ **/
+const char *
+nm_setting_802_1x_get_cert_id (NMSetting8021x *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NULL);
+
+	return (const char *) (NM_SETTING_802_1X_GET_PRIVATE (setting)->cert_id);
+}
+
+/**
+ * nm_setting_802_1x_get_ca_cert_id:
+ * @setting: the #NMSetting8021x
+ *
+ * Gets the #NMSetting8021x:ca-cert-id property.
+ *
+ * Returns: CA certificate identifier for the OpenSSL engine to use if
+ * #NMSetting8021x:engine is set to TRUE
+ **/
+const char *
+nm_setting_802_1x_get_ca_cert_id (NMSetting8021x *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NULL);
+
+	return (const char *) (NM_SETTING_802_1X_GET_PRIVATE (setting)->ca_cert_id);
+}
+
+/**
+ * nm_setting_802_1x_get_pkcs11_engine_path:
+ * @setting: the #NMSetting8021x
+ *
+ * Gets the #NMSetting8021x:pkcs11-engine-path property.
+ *
+ * Returns: PKCS #11 engine path for the OpenSSL engine to use if
+ * #NMSetting8021x:engine or #NMSetting8021x:phase2-engine is set to TRUE
+ **/
+const char *
+nm_setting_802_1x_get_pkcs11_engine_path (NMSetting8021x *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NULL);
+
+	return (const char *) (NM_SETTING_802_1X_GET_PRIVATE (setting)->pkcs11_engine_path);
+}
+
+/**
+ * nm_setting_802_1x_get_pkcs11_module_path:
+ * @setting: the #NMSetting8021x
+ *
+ * Gets the #NMSetting8021x:pkcs11-module-path property.
+ *
+ * Returns: PKCS #11 module path for the OpenSSL engine to use if
+ * #NMSetting8021x:engine or #NMSetting8021x:phase2-engine is set to TRUE
+ **/
+const char *
+nm_setting_802_1x_get_pkcs11_module_path (NMSetting8021x *setting)
+{
+	g_return_val_if_fail (NM_IS_SETTING_802_1X (setting), NULL);
+
+	return (const char *) (NM_SETTING_802_1X_GET_PRIVATE (setting)->pkcs11_module_path);
+}
+
 static void
 need_secrets_password (NMSetting8021x *self,
                        GPtrArray *secrets,
@@ -2202,6 +2316,7 @@ need_secrets_sim (NMSetting8021x *self,
 {
 	NMSetting8021xPrivate *priv = NM_SETTING_802_1X_GET_PRIVATE (self);
 
+	/* The PIN is mandatory for EAP-SIM */
 	if (!priv->pin || !strlen (priv->pin))
 		g_ptr_array_add (secrets, NM_SETTING_802_1X_PIN);
 }
@@ -2251,19 +2366,29 @@ need_secrets_tls (NMSetting8021x *self,
 		if (need_private_key_password (blob, path, priv->phase2_private_key_password))
 			g_ptr_array_add (secrets, NM_SETTING_802_1X_PHASE2_PRIVATE_KEY_PASSWORD);
 	} else {
-		scheme = nm_setting_802_1x_get_private_key_scheme (self);
-		if (scheme == NM_SETTING_802_1X_CK_SCHEME_PATH)
-			path = nm_setting_802_1x_get_private_key_path (self);
-		else if (scheme == NM_SETTING_802_1X_CK_SCHEME_BLOB)
-			blob = nm_setting_802_1x_get_private_key_blob (self);
-		else {
-			g_warning ("%s: unknown private key scheme %d", __func__, scheme);
-			g_ptr_array_add (secrets, NM_SETTING_802_1X_PRIVATE_KEY);
-			return;
-		}
+		if (priv->engine) {
+			/* If the PKCS #11 OpenSSL engine is active the PIN might be a
+			 * secret. By default the PIN is optional but if it has been
+			 * specified it is a required secret. In case of errors check
+			 * the ENGINE lines in the log/output of the WPA supplicant. */
+			if (!(priv->pin_flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED))
+				if (!priv->pin || !strlen (priv->pin))
+					g_ptr_array_add (secrets, NM_SETTING_802_1X_PIN);
+		} else {
+			scheme = nm_setting_802_1x_get_private_key_scheme (self);
+			if (scheme == NM_SETTING_802_1X_CK_SCHEME_PATH)
+				path = nm_setting_802_1x_get_private_key_path (self);
+			else if (scheme == NM_SETTING_802_1X_CK_SCHEME_BLOB)
+				blob = nm_setting_802_1x_get_private_key_blob (self);
+			else {
+				g_warning ("%s: unknown private key scheme %d", __func__, scheme);
+				g_ptr_array_add (secrets, NM_SETTING_802_1X_PRIVATE_KEY);
+				return;
+			}
 
-		if (need_private_key_password (blob, path, priv->private_key_password))
-			g_ptr_array_add (secrets, NM_SETTING_802_1X_PRIVATE_KEY_PASSWORD);
+			if (need_private_key_password (blob, path, priv->private_key_password))
+				g_ptr_array_add (secrets, NM_SETTING_802_1X_PRIVATE_KEY_PASSWORD);
+		}
 	}
 }
 
@@ -2331,61 +2456,72 @@ verify_tls (NMSetting8021x *self, gboolean phase2, GError **error)
 			}
 		}
 	} else {
-		if (!priv->client_cert) {
-			g_set_error_literal (error,
-			                     NM_SETTING_802_1X_ERROR,
-			                     NM_SETTING_802_1X_ERROR_MISSING_PROPERTY,
-			                     _("property is missing"));
-			g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
-			return FALSE;
-		} else if (!priv->client_cert->len) {
-			g_set_error_literal (error,
-			                     NM_SETTING_802_1X_ERROR,
-			                     NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
-			                     _("property is empty"));
-			g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
-			return FALSE;
-		}
-
-		/* Private key is required for TLS */
-		if (!priv->private_key) {
-			g_set_error_literal (error,
-			                     NM_SETTING_802_1X_ERROR,
-			                     NM_SETTING_802_1X_ERROR_MISSING_PROPERTY,
-			                     _("property is missing"));
-			g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_PRIVATE_KEY);
-			return FALSE;
-		} else if (!priv->private_key->len) {
-			g_set_error_literal (error,
-			                     NM_SETTING_802_1X_ERROR,
-			                     NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
-			                     _("property is empty"));
-			g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_PRIVATE_KEY);
-			return FALSE;
-		}
-
-		/* If the private key is PKCS#12, check that it matches the client cert */
-		if (crypto_is_pkcs12_data (priv->private_key)) {
-			if (priv->private_key->len != priv->client_cert->len) {
-				g_set_error (error,
+		/* If the PKCS #11 OpenSSL engine is active, the required configuration
+		 * options - if any - depend on the active PKCS #11 module. Because of
+		 * this it is unknown which configuration options are required. In case
+		 * of errors the ENGINE lines in the log/output of the WPA supplicant
+		 * need to be consulted for missing or faulty configuration options. */
+		if (!priv->engine) {
+			if (!priv->client_cert) {
+ 				g_set_error (error,
 				             NM_SETTING_802_1X_ERROR,
-				             NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+				             NM_SETTING_802_1X_ERROR_MISSING_PROPERTY,
 				             _("has to match '%s' property for PKCS#12"),
-				             NM_SETTING_802_1X_PRIVATE_KEY);
+				             NM_SETTING_802_1X_CLIENT_CERT);
+				g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
+				return FALSE;
+			} else if (!priv->client_cert->len) {
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+							 _("has to match '%s' property for PKCS#12"),
+							 NM_SETTING_802_1X_CLIENT_CERT);
 				g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
 				return FALSE;
 			}
 
-			if (memcmp (priv->private_key->data,
-			            priv->client_cert->data,
-			            priv->private_key->len)) {
+			/* Private key is required for TLS */
+			if (!priv->private_key) {
 				g_set_error (error,
 				             NM_SETTING_802_1X_ERROR,
-				             NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+				             NM_SETTING_802_1X_ERROR_MISSING_PROPERTY,
 				             _("has to match '%s' property for PKCS#12"),
 				             NM_SETTING_802_1X_PRIVATE_KEY);
-				g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
+				g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_PRIVATE_KEY);
 				return FALSE;
+			} else if (!priv->private_key->len) {
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+				             _("has to match '%s' property for PKCS#12"),
+							 NM_SETTING_802_1X_PRIVATE_KEY);
+				g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_PRIVATE_KEY);
+				return FALSE;
+			}
+
+			/* If the private key is PKCS#12, check that it matches the client cert */
+			if (crypto_is_pkcs12_data (priv->private_key)) {
+				if (priv->private_key->len != priv->client_cert->len) {
+					g_set_error (error,
+								 NM_SETTING_802_1X_ERROR,
+								 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+				             	 _("has to match '%s' property for PKCS#12"),
+								 NM_SETTING_802_1X_CLIENT_CERT);
+					g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
+					return FALSE;
+				}
+
+				if (memcmp (priv->private_key->data,
+							priv->client_cert->data,
+							priv->private_key->len)) {
+					g_set_error (error,
+								 NM_SETTING_802_1X_ERROR,
+								 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+				             	 _("has to match '%s' property for PKCS#12"),
+								 NM_SETTING_802_1X_CLIENT_CERT);
+					g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_CLIENT_CERT);
+					return FALSE;
+				}
 			}
 		}
 	}
@@ -2634,12 +2770,14 @@ verify (NMSetting *setting, GSList *all_settings, GError **error)
 	NMSetting8021x *self = NM_SETTING_802_1X (setting);
 	NMSetting8021xPrivate *priv = NM_SETTING_802_1X_GET_PRIVATE (self);
 	const char *valid_eap[] = { "leap", "md5", "tls", "peap", "ttls", "sim", "fast", "pwd", NULL };
+	const char *valid_eap_engine[] = { "tls", NULL };  // In case the PKCS #11 OpenSSL engine is in use only EAP-TLS is allowed
 	const char *valid_phase1_peapver[] = { "0", "1", NULL };
 	const char *valid_phase1_peaplabel[] = { "0", "1", NULL };
 	const char *valid_phase1_fast_pac[] = { "0", "1", "2", "3", NULL };
 	const char *valid_phase2_auth[] = { "pap", "chap", "mschap", "mschapv2", "gtc", "otp", "md5", "tls", NULL };
 	const char *valid_phase2_autheap[] = { "md5", "mschapv2", "otp", "gtc", "tls", NULL };
 	GSList *iter;
+	struct stat info_module, info_engine;
 
 	if (error)
 		g_return_val_if_fail (*error == NULL, FALSE);
@@ -2653,13 +2791,22 @@ verify (NMSetting *setting, GSList *all_settings, GError **error)
 		return FALSE;
 	}
 
-	if (!_nm_utils_string_slist_validate (priv->eap, valid_eap)) {
-		g_set_error_literal (error,
-		                     NM_SETTING_802_1X_ERROR,
-		                     NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
-		                     _("property is invalid"));
-		g_prefix_error (error, "%s.%s: ", NM_SETTING_802_1X_SETTING_NAME, NM_SETTING_802_1X_EAP);
-		return FALSE;
+	if (priv->engine) {
+		if (!_nm_utils_string_slist_validate (priv->eap, valid_eap_engine)) {
+			g_set_error (error,
+						 NM_SETTING_802_1X_ERROR,
+						 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+						 _("property is invalid"));
+			return FALSE;
+		}
+	} else {
+		if (!_nm_utils_string_slist_validate (priv->eap, valid_eap)) {
+			g_set_error (error,
+						 NM_SETTING_802_1X_ERROR,
+						 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+						 _("property is invalid"));
+			return FALSE;
+		}
 	}
 
 	/* Ask each configured EAP method if its valid */
@@ -2728,6 +2875,19 @@ verify (NMSetting *setting, GSList *all_settings, GError **error)
 		return FALSE;
 	}
 
+	if (priv->engine) {
+		/* PKCS #11 OpenSSL engine is enabled.
+		 * The private key gets handled via the PKCS #11 OpenSSL engine and
+		 * thus it needs to be absent. */
+		if (priv->private_key) {
+			g_set_error (error,
+						 NM_SETTING_802_1X_ERROR,
+						 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+						 NM_SETTING_802_1X_EAP);
+			return FALSE;
+		}
+	}
+
 	if (!verify_cert (priv->ca_cert, NM_SETTING_802_1X_CA_CERT, error))
 		return FALSE;
 	if (!verify_cert (priv->phase2_ca_cert, NM_SETTING_802_1X_PHASE2_CA_CERT, error))
@@ -2742,6 +2902,77 @@ verify (NMSetting *setting, GSList *all_settings, GError **error)
 		return FALSE;
 	if (!verify_cert (priv->phase2_private_key, NM_SETTING_802_1X_PHASE2_PRIVATE_KEY, error))
 		return FALSE;
+
+	if (priv->engine) {
+		/* If the PKCS #11 OpenSSL engine is active, the required configuration
+		 * options - if any - depend on the active PKCS #11 module. Because of
+		 * this it is unknown which configuration options are required. In case
+		 * of errors the ENGINE lines in the log/output of the WPA supplicant
+		 * need to be consulted for missing or faulty configuration options. */
+
+		/* Check PKCS #11 engine and module path if specified */
+		if (priv->pkcs11_engine_path || priv->pkcs11_module_path) {
+			/* Both engine and module bath need to be given */
+			if (!priv->pkcs11_engine_path) {
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_MISSING_PROPERTY,
+							 NM_SETTING_802_1X_EAP);
+				return FALSE;
+			}
+			if (!priv->pkcs11_module_path) {
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_MISSING_PROPERTY,
+							 NM_SETTING_802_1X_EAP);
+				return FALSE;
+			}
+
+			/* Engine and module path are not allowed to be an empty string */
+			if (!strlen(priv->pkcs11_engine_path)) {
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+							 NM_SETTING_802_1X_EAP);
+				return FALSE;
+			}
+			if (!strlen(priv->pkcs11_module_path)) {
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+							 NM_SETTING_802_1X_EAP);
+				return FALSE;
+			}
+			/* Check that the engine and the module are within an allowed filesystem prefix */
+			#define PKCS11_ALLOWED_PREFIX "/usr/lib/"
+			if (strncmp(priv->pkcs11_engine_path, PKCS11_ALLOWED_PREFIX, strlen(PKCS11_ALLOWED_PREFIX)) != 0 ||
+				strncmp(priv->pkcs11_module_path, PKCS11_ALLOWED_PREFIX, strlen(PKCS11_ALLOWED_PREFIX)) != 0) {
+				g_warning ("pkcs11_engine_path and pkcs11_module_path must be in "PKCS11_ALLOWED_PREFIX);
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+							 NM_SETTING_802_1X_EAP);
+				return FALSE;
+			}
+			/* Check that the engine and the module files are owned by root */
+			if (stat(priv->pkcs11_engine_path, &info_engine) != 0) {
+				g_warning ("can't stat() on pkcs11_engine_path");
+				return FALSE;
+			}
+			if (stat(priv->pkcs11_module_path, &info_module) != 0) {
+				g_warning ("can't stat() on pkcs11_module_path");
+				return FALSE;
+			}
+			if (info_engine.st_uid != 0 || info_module.st_uid) {
+				g_warning ("pkcs11_engine_path and pkcs11_module_path must be files owned by root");
+				g_set_error (error,
+							 NM_SETTING_802_1X_ERROR,
+							 NM_SETTING_802_1X_ERROR_INVALID_PROPERTY,
+							 NM_SETTING_802_1X_EAP);
+				return FALSE;
+			}
+		}
+	}
 
 	/* FIXME: finish */
 
@@ -2990,12 +3221,40 @@ set_property (GObject *object, guint prop_id,
 	case PROP_PIN:
 		g_free (priv->pin);
 		priv->pin = g_value_dup_string (value);
+		if (priv->pin) {
+			/* PIN has been set and is required from now on. Ensure that the
+			 * NM_SETTING_SECRET_FLAG_NOT_REQUIRED bit is not set in the flags. */
+			priv->pin_flags &= ~NM_SETTING_SECRET_FLAG_NOT_REQUIRED;
+		}
 		break;
 	case PROP_PIN_FLAGS:
 		priv->pin_flags = g_value_get_uint (value);
 		break;
 	case PROP_SYSTEM_CA_CERTS:
 		priv->system_ca_certs = g_value_get_boolean (value);
+		break;
+	case PROP_ENGINE:
+		priv->engine = g_value_get_boolean (value);
+		break;
+	case PROP_KEY_ID:
+		g_free (priv->key_id);
+		priv->key_id = g_value_dup_string (value);
+		break;
+	case PROP_CERT_ID:
+		g_free (priv->cert_id);
+		priv->cert_id = g_value_dup_string (value);
+		break;
+	case PROP_CA_CERT_ID:
+		g_free (priv->ca_cert_id);
+		priv->ca_cert_id = g_value_dup_string (value);
+		break;
+	case PROP_PKCS11_ENGINE_PATH:
+		g_free (priv->pkcs11_engine_path);
+		priv->pkcs11_engine_path = g_value_dup_string (value);
+		break;
+	case PROP_PKCS11_MODULE_PATH:
+		g_free (priv->pkcs11_module_path);
+		priv->pkcs11_module_path = g_value_dup_string (value);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -3099,13 +3358,31 @@ get_property (GObject *object, guint prop_id,
 		g_value_set_uint (value, priv->phase2_private_key_password_flags);
 		break;
 	case PROP_PIN:
-		g_value_set_string (value, priv->pin);
+		g_value_set_string (value, nm_setting_802_1x_get_pin (setting));
 		break;
 	case PROP_PIN_FLAGS:
-		g_value_set_uint (value, priv->pin_flags);
+		g_value_set_uint (value, nm_setting_802_1x_get_pin_flags (setting));
 		break;
 	case PROP_SYSTEM_CA_CERTS:
 		g_value_set_boolean (value, priv->system_ca_certs);
+		break;
+	case PROP_ENGINE:
+		g_value_set_boolean (value, nm_setting_802_1x_get_engine (setting));
+		break;
+	case PROP_KEY_ID:
+		g_value_set_string (value, nm_setting_802_1x_get_key_id (setting));
+		break;
+	case PROP_CERT_ID:
+		g_value_set_string (value, nm_setting_802_1x_get_cert_id (setting));
+		break;
+	case PROP_CA_CERT_ID:
+		g_value_set_string (value, nm_setting_802_1x_get_ca_cert_id (setting));
+		break;
+	case PROP_PKCS11_ENGINE_PATH:
+		g_value_set_string (value, nm_setting_802_1x_get_pkcs11_engine_path (setting));
+		break;
+	case PROP_PKCS11_MODULE_PATH:
+		g_value_set_string (value, nm_setting_802_1x_get_pkcs11_module_path (setting));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -3853,10 +4130,13 @@ nm_setting_802_1x_class_init (NMSetting8021xClass *setting_class)
 	g_object_class_install_property
 		(object_class, PROP_PIN,
 		 g_param_spec_string (NM_SETTING_802_1X_PIN,
-		                      "PIN",
-		                      "PIN used for EAP authentication methods.",
-		                      NULL,
-		                      G_PARAM_READWRITE | NM_SETTING_PARAM_SECRET));
+					  "PIN for USIM, GSM SIM, and smartcards",
+					  "This field is used to configure PIN for SIM "
+					  "and smartcards for EAP-SIM and EAP-AKA. In "
+					  "addition, this is used with EAP-TLS if a "
+					  "smartcard is used for private key operations.",
+							  NULL,
+							  G_PARAM_READWRITE | NM_SETTING_PARAM_SERIALIZE | NM_SETTING_PARAM_SECRET));
 
 	/**
 	 * NMSetting8021x:pin-flags:
@@ -3865,12 +4145,12 @@ nm_setting_802_1x_class_init (NMSetting8021xClass *setting_class)
 	 **/
 	g_object_class_install_property (object_class, PROP_PIN_FLAGS,
 		 g_param_spec_uint (NM_SETTING_802_1X_PIN_FLAGS,
-		                    "PIN Flags",
-		                    "Flags indicating how to handle the 802.1x PIN.",
-		                    NM_SETTING_SECRET_FLAG_NONE,
-		                    NM_SETTING_SECRET_FLAGS_ALL,
-		                    NM_SETTING_SECRET_FLAG_NONE,
-		                    G_PARAM_READWRITE));
+							"PIN Flags",
+							"Flags indicating how to handle the 802.1x PIN.",
+							NM_SETTING_SECRET_FLAG_NONE,
+							NM_SETTING_SECRET_FLAGS_ALL,
+							NM_SETTING_SECRET_FLAG_NOT_REQUIRED,
+							G_PARAM_READWRITE | G_PARAM_CONSTRUCT | NM_SETTING_PARAM_SERIALIZE));
 
 	/**
 	 * NMSetting8021x:system-ca-certs:
@@ -3895,6 +4175,105 @@ nm_setting_802_1x_class_init (NMSetting8021xClass *setting_class)
 							   "by the 'ca-cert' and 'phase2-ca-cert' properties.",
 							   FALSE,
 							   G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
+
+	/**
+	 * NMSetting8021x:engine:
+	 *
+	 * When TRUE, the PKCS #11 OpenSSL engine will be used. E.g. this is needed
+	 * if private key operations for EAP-TLS will be performed on a smartcard.
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_ENGINE,
+		 g_param_spec_boolean (NM_SETTING_802_1X_ENGINE,
+							   "Use PKCS #11 OpenSSL engine",
+							   "When TRUE, the PKCS #11 OpenSSL engine will "
+							   "be used. E.g. this is needed if private key "
+							   "operations for EAP-TLS will be performed on a "
+							   "smartcard.",
+							   FALSE,
+							   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | NM_SETTING_PARAM_SERIALIZE));
+
+	/**
+	 * NMSetting8021x:key-id:
+	 *
+	 * Key identifier for the PKCS #11 OpenSSL engine to use if
+	 * #NMSetting8021x:engine is set to TRUE
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_KEY_ID,
+		 g_param_spec_string (NM_SETTING_802_1X_KEY_ID,
+							  "Key ID for PKCS #11 OpenSSL engine",
+							  "The key identifier to use for the PKCS #11 "
+							  "OpenSSL engine. This is used if private key "
+							  "operations for EAP-TLS are performed using a "
+							  "smartcard.",
+							  NULL,
+							  G_PARAM_READWRITE | NM_SETTING_PARAM_SERIALIZE));
+
+	/**
+	 * NMSetting8021x:cert-id:
+	 *
+	 * Certificate identifier for the PKCS #11 OpenSSL engine to use if
+	 * #NMSetting8021x:engine is set to TRUE
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_CERT_ID,
+		 g_param_spec_string (NM_SETTING_802_1X_CERT_ID,
+							  "Cert ID for PKCS #11 OpenSSL engine",
+							  "The certificate identifier to use for the "
+							  "PKCS #11 OpenSSL engine. This is used if "
+							  "private key operations for EAP-TLS are "
+							  "performed using a smartcard.",
+							  NULL,
+							  G_PARAM_READWRITE | NM_SETTING_PARAM_SERIALIZE));
+
+	/**
+	 * NMSetting8021x:ca-cert-id:
+	 *
+	 * CA certificate identifier for the PKCS #11 OpenSSL engine to use if
+	 * #NMSetting8021x:engine is set to TRUE
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_CA_CERT_ID,
+		 g_param_spec_string (NM_SETTING_802_1X_CA_CERT_ID,
+							  "CA Cert ID for PKCS #11 OpenSSL engine",
+							  "The CA certificate identifier to use for the "
+							  "PKCS #11 OpenSSL engine. This is used if "
+							  "private key operations for EAP-TLS are "
+							  "performed using a smartcard.",
+							  NULL,
+							  G_PARAM_READWRITE | NM_SETTING_PARAM_SERIALIZE));
+
+	/**
+	 * NMSetting8021x:pkcs11-engine-path:
+	 *
+	 * PKCS #11 engine path for the OpenSSL engine to use if
+	 * #NMSetting8021x:engine or #NMSetting8021x:phase2-engine is set to TRUE.
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_PKCS11_ENGINE_PATH,
+		 g_param_spec_string (NM_SETTING_802_1X_PKCS11_ENGINE_PATH,
+							  "PKCS #11 Engine Path",
+							  "The PKCS #11 engine path to use if the "
+							  "PKCS #11 OpenSSL engine is in use. "
+							  "Usually path to engine_pkcs11.so.",
+							  NULL,
+							  G_PARAM_READWRITE | NM_SETTING_PARAM_SERIALIZE));
+
+	/**
+	 * NMSetting8021x:pkcs11-module-path:
+	 *
+	 * PKCS #11 module path for the OpenSSL engine to use if
+	 * #NMSetting8021x:engine or #NMSetting8021x:phase2-engine is set to TRUE.
+	 **/
+	g_object_class_install_property
+		(object_class, PROP_PKCS11_MODULE_PATH,
+		 g_param_spec_string (NM_SETTING_802_1X_PKCS11_MODULE_PATH,
+							  "PKCS #11 Module Path",
+							  "The PKCS #11 module path to use if the "
+							  "PKCS #11 OpenSSL engine is in use.",
+							  NULL,
+							  G_PARAM_READWRITE | NM_SETTING_PARAM_SERIALIZE));
 
 	/* Initialize crypto lbrary. */
 	if (!nm_utils_init (&error)) {

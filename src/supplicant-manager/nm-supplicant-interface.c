@@ -374,6 +374,92 @@ set_scanning (NMSupplicantInterface *self, gboolean new_scanning)
 	}
 }
 
+static void
+emit_error_helper (NMSupplicantInterface *self,
+				   GError *err);
+
+static void
+set_ap_scan_cb (DBusGProxy *proxy, DBusGProxyCall *call_id, gpointer user_data);
+
+static gboolean
+call_set_ap_scan (NMSupplicantInterface *self)
+{
+	NMSupplicantInterfacePrivate *priv = NM_SUPPLICANT_INTERFACE_GET_PRIVATE (self);
+	DBusGProxyCall *call;
+	GValue value = G_VALUE_INIT;
+
+	g_value_init (&value, G_TYPE_UINT);
+	g_value_set_uint (&value, nm_supplicant_config_get_ap_scan (priv->cfg));
+
+	call = dbus_g_proxy_begin_call (priv->props_proxy, "Set",
+									set_ap_scan_cb,
+									self,
+									NULL,
+									G_TYPE_STRING, WPAS_DBUS_IFACE_INTERFACE,
+									G_TYPE_STRING, "ApScan",
+									G_TYPE_VALUE, &value,
+									G_TYPE_INVALID);
+	nm_call_store_add (priv->assoc_pcalls, priv->props_proxy, call);
+
+	g_value_unset (&value);
+
+	return call != NULL;
+}
+
+static void
+set_pkcs11_engine_and_module_path_cb (DBusGProxy *proxy, DBusGProxyCall *call_id, gpointer user_data)
+{
+	NMSupplicantInterface *self = NM_SUPPLICANT_INTERFACE (user_data);
+	NMSupplicantInterfacePrivate *priv = NM_SUPPLICANT_INTERFACE_GET_PRIVATE (self);
+	GError *err = NULL;
+
+	if (!dbus_g_proxy_end_call (proxy, call_id, &err, G_TYPE_INVALID)) {
+		nm_log_warn (LOGD_SUPPLICANT,
+					 "Couldn't send PKCS #11 engine and module path: %s.",
+					 err->message);
+		emit_error_helper (self, err);
+		g_error_free (err);
+		return;
+	}
+
+	nm_log_info (LOGD_SUPPLICANT,
+				 "Config: set PKCS #11 engine path to: %s",
+				 nm_supplicant_config_get_pkcs11_engine_path (priv->cfg));
+	nm_log_info (LOGD_SUPPLICANT,
+				 "Config: set PKCS #11 module path to: %s",
+				 nm_supplicant_config_get_pkcs11_module_path (priv->cfg));
+
+	/* Continue with setting ApScan */
+	call_set_ap_scan (self);
+}
+
+static gboolean
+call_set_pkcs11_engine_and_module_path (NMSupplicantInterface *self)
+{
+	NMSupplicantInterfacePrivate *priv = NM_SUPPLICANT_INTERFACE_GET_PRIVATE (self);
+	DBusGProxyCall *call;
+	const char *pkcs11_engine_path = nm_supplicant_config_get_pkcs11_engine_path (priv->cfg);
+	const char *pkcs11_module_path = nm_supplicant_config_get_pkcs11_module_path (priv->cfg);
+
+	if (!(pkcs11_engine_path && pkcs11_module_path))
+		/**
+		 * No PKCS #11 engine and module path to set. Skip the
+		 * SetPKCS11EngineAndModulePath D-Bus method call and
+		 * continue with setting the ApScan D-Bus property.
+		 */
+		return call_set_ap_scan (self);
+
+	call = dbus_g_proxy_begin_call (priv->iface_proxy, "SetPKCS11EngineAndModulePath",
+									set_pkcs11_engine_and_module_path_cb,
+									self,
+									NULL,
+									G_TYPE_STRING, pkcs11_engine_path,
+									G_TYPE_STRING, pkcs11_module_path,
+									G_TYPE_INVALID);
+	nm_call_store_add (priv->assoc_pcalls, priv->props_proxy, call);
+	return call != NULL;
+}
+
 gboolean
 nm_supplicant_interface_get_scanning (NMSupplicantInterface *self)
 {
@@ -1126,8 +1212,6 @@ nm_supplicant_interface_set_config (NMSupplicantInterface *self,
                                     NMSupplicantConfig *cfg)
 {
 	NMSupplicantInterfacePrivate *priv;
-	DBusGProxyCall *call;
-	GValue value = G_VALUE_INIT;
 
 	g_return_val_if_fail (NM_IS_SUPPLICANT_INTERFACE (self), FALSE);
 
@@ -1152,21 +1236,7 @@ nm_supplicant_interface_set_config (NMSupplicantInterface *self,
 
 	g_object_ref (priv->cfg);
 
-	g_value_init (&value, G_TYPE_UINT);
-	g_value_set_uint (&value, nm_supplicant_config_get_ap_scan (priv->cfg));
-
-	call = dbus_g_proxy_begin_call (priv->props_proxy, "Set",
-	                                set_ap_scan_cb,
-	                                self,
-	                                NULL,
-	                                G_TYPE_STRING, WPAS_DBUS_IFACE_INTERFACE,
-	                                G_TYPE_STRING, "ApScan",
-	                                G_TYPE_VALUE, &value,
-	                                G_TYPE_INVALID);
-	nm_call_store_add (priv->assoc_pcalls, priv->props_proxy, call);
-
-	g_value_unset (&value);
-	return call != NULL;
+	return call_set_pkcs11_engine_and_module_path (self);
 }
 
 static void

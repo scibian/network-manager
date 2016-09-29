@@ -667,7 +667,7 @@ clear_nonagent_secrets (GHashTableIter *iter,
                         NMSettingSecretFlags flags,
                         gpointer user_data)
 {
-	if (flags != NM_SETTING_SECRET_FLAG_AGENT_OWNED)
+	if ( ! (flags & (NM_SETTING_SECRET_FLAG_AGENT_OWNED | NM_SETTING_SECRET_FLAG_NOT_SAVED)))
 		g_hash_table_iter_remove (iter);
 	return TRUE;
 }

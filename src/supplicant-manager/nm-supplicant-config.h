@@ -52,6 +52,16 @@ GType nm_supplicant_config_get_type (void);
 
 NMSupplicantConfig *nm_supplicant_config_new (void);
 
+const char *nm_supplicant_config_get_pkcs11_engine_path (NMSupplicantConfig *self);
+
+void nm_supplicant_config_set_pkcs11_engine_path (NMSupplicantConfig *self,
+												  const char *pkcs11_engine_path);
+
+const char *nm_supplicant_config_get_pkcs11_module_path (NMSupplicantConfig *self);
+
+void nm_supplicant_config_set_pkcs11_module_path (NMSupplicantConfig *self,
+												  const char *pkcs11_module_path);
+
 guint32 nm_supplicant_config_get_ap_scan (NMSupplicantConfig *self);
 
 void nm_supplicant_config_set_ap_scan (NMSupplicantConfig *self,

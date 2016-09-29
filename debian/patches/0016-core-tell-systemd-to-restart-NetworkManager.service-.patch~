@@ -15,11 +15,11 @@ https://bugzilla.gnome.org/show_bug.cgi?id=741587
  data/NetworkManager.service.in | 1 +
  1 file changed, 1 insertion(+)
 
-Index: network-manager/data/NetworkManager.service.in
-===================================================================
---- network-manager.orig/data/NetworkManager.service.in
-+++ network-manager/data/NetworkManager.service.in
-@@ -5,6 +5,7 @@ Description=Network Manager
+diff --git a/data/NetworkManager.service.in b/data/NetworkManager.service.in
+index 84a9c95..b2e61ff 100644
+--- a/data/NetworkManager.service.in
++++ b/data/NetworkManager.service.in
+@@ -7,6 +7,7 @@ Before=network.target @DISTRO_NETWORK_SERVICE@
  Type=dbus
  BusName=org.freedesktop.NetworkManager
  ExecStart=@sbindir@/NetworkManager --no-daemon
@@ -27,3 +27,6 @@ Index: network-manager/data/NetworkManager.service.in
  # NM doesn't want systemd to kill its children for it
  KillMode=process
  
+-- 
+2.1.4
+

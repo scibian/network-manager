@@ -2635,9 +2635,13 @@ ip4_config_merge_and_apply (NMDevice *self,
 	if (priv->ext_ip4_config)
 		nm_ip4_config_merge (composite, priv->ext_ip4_config);
 
-	/* Merge user overrides into the composite config */
+	/* Merge user overrides into the composite config.  Generated+assumed
+	 * connections come from the system not the user and merging them would
+	 * be redundant, so don't bother.
+	 */
 	connection = nm_device_get_connection (self);
-	if (connection) {
+	if (   connection
+	    && !nm_settings_connection_get_nm_generated (NM_SETTINGS_CONNECTION (connection))) {
 		nm_ip4_config_merge_setting (composite,
 		                             nm_connection_get_setting_ip4_config (connection),
 		                             nm_device_get_priority (self));
@@ -2956,8 +2960,6 @@ act_stage3_ip4_config_start (NMDevice *self,
 	g_assert (connection);
 
 	method = nm_utils_get_ip_config_method (connection, NM_TYPE_SETTING_IP4_CONFIG);
-	if (priv->master)
-		g_assert_cmpstr (method, ==, NM_SETTING_IP4_CONFIG_METHOD_DISABLED);
 
 	if (   strcmp (method, NM_SETTING_IP4_CONFIG_METHOD_MANUAL) != 0
 	    && priv->is_master
@@ -3080,9 +3082,13 @@ ip6_config_merge_and_apply (NMDevice *self,
 	if (priv->ext_ip6_config)
 		nm_ip6_config_merge (composite, priv->ext_ip6_config);
 
-	/* Merge user overrides into the composite config */
+	/* Merge user overrides into the composite config.  Generated+assumed
+	 * connections come from the system not the user and merging them would
+	 * be redundant, so don't bother.
+	 */
 	connection = nm_device_get_connection (self);
-	if (connection) {
+	if (   connection
+	    && !nm_settings_connection_get_nm_generated (NM_SETTINGS_CONNECTION (connection))) {
 		nm_ip6_config_merge_setting (composite,
 		                             nm_connection_get_setting_ip6_config (connection),
 		                             nm_device_get_priority (self));
@@ -3839,8 +3845,6 @@ act_stage3_ip6_config_start (NMDevice *self,
 	g_assert (connection);
 
 	method = nm_utils_get_ip_config_method (connection, NM_TYPE_SETTING_IP6_CONFIG);
-	if (priv->master)
-		g_assert_cmpstr (method, ==, NM_SETTING_IP6_CONFIG_METHOD_IGNORE);
 
 	if (   strcmp (method, NM_SETTING_IP6_CONFIG_METHOD_MANUAL) != 0
 	    && priv->is_master
@@ -4429,7 +4433,7 @@ start_sharing (NMDevice *self, NMIP4Config *config)
 static void
 send_arps (NMDevice *self, const char *mode_arg)
 {
-	const char *argv[] = { "/sbin/arping", mode_arg, "-q", "-I", nm_device_get_ip_iface (self), "-c", "1", NULL, NULL };
+	const char *argv[] = { "/usr/bin/arping", mode_arg, "-q", "-I", nm_device_get_ip_iface (self), "-c", "1", NULL, NULL };
 	int ip_arg = G_N_ELEMENTS (argv) - 2;
 	NMConnection *connection;
 	NMSettingIP4Config *s_ip4;
@@ -6075,6 +6079,7 @@ nm_device_connection_is_available (NMDevice *device,
 {
 	NMDevicePrivate *priv = NM_DEVICE_GET_PRIVATE (device);
 	gboolean available = FALSE;
+	NMSettingConnection *s_con;
 
 	if (nm_device_get_default_unmanaged (device) && (priv->state == NM_DEVICE_STATE_UNMANAGED)) {
 		/* default-unmanaged  devices in UNMANAGED state have no available connections
@@ -6096,6 +6101,13 @@ nm_device_connection_is_available (NMDevice *device,
 		    && NM_DEVICE_GET_CLASS (device)->check_connection_available_wifi_hidden)
 			available = NM_DEVICE_GET_CLASS (device)->check_connection_available_wifi_hidden (device, connection);
 	}
+
+	/* Calibre temporary bug fix: for some reason GSM modems never accept a connecton once it's been
+	   saved to disk and loaded again. So let's just accept any GSM connection for any GSM device.
+	   Anyway there is no real means of verifying if a GSM connection fits a modem without launching it. */
+	s_con = nm_connection_get_setting_connection (connection);
+	if (g_str_equal (nm_setting_connection_get_connection_type (s_con), NM_SETTING_GSM_SETTING_NAME))
+		return TRUE;
 
 	return available;
 }

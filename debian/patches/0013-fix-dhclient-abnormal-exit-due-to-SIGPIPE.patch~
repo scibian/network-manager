@@ -35,10 +35,10 @@ Conflicts:
  src/dhcp-manager/nm-dhcp-dhcpcd.c   | 3 ++-
  2 files changed, 9 insertions(+), 2 deletions(-)
 
-Index: network-manager/src/dhcp-manager/nm-dhcp-dhclient.c
-===================================================================
---- network-manager.orig/src/dhcp-manager/nm-dhcp-dhclient.c
-+++ network-manager/src/dhcp-manager/nm-dhcp-dhclient.c
+diff --git a/src/dhcp-manager/nm-dhcp-dhclient.c b/src/dhcp-manager/nm-dhcp-dhclient.c
+index 4232ee0..595a0ac 100644
+--- a/src/dhcp-manager/nm-dhcp-dhclient.c
++++ b/src/dhcp-manager/nm-dhcp-dhclient.c
 @@ -413,6 +413,11 @@ dhclient_start (NMDHCPClient *client,
  
  	g_ptr_array_add (argv, (gpointer) "-d");
@@ -61,11 +61,11 @@ Index: network-manager/src/dhcp-manager/nm-dhcp-dhclient.c
  	                    &dhclient_child_setup, NULL, &pid, &error)) {
  		nm_log_warn (log_domain, "dhclient failed to start: '%s'", error->message);
  		g_error_free (error);
-Index: network-manager/src/dhcp-manager/nm-dhcp-dhcpcd.c
-===================================================================
---- network-manager.orig/src/dhcp-manager/nm-dhcp-dhcpcd.c
-+++ network-manager/src/dhcp-manager/nm-dhcp-dhcpcd.c
-@@ -152,7 +152,8 @@ ip4_start (NMDHCPClient *client,
+diff --git a/src/dhcp-manager/nm-dhcp-dhcpcd.c b/src/dhcp-manager/nm-dhcp-dhcpcd.c
+index c0877a6..b295ae9 100644
+--- a/src/dhcp-manager/nm-dhcp-dhcpcd.c
++++ b/src/dhcp-manager/nm-dhcp-dhcpcd.c
+@@ -155,7 +155,8 @@ ip4_start (NMDHCPClient *client,
  	nm_log_dbg (LOGD_DHCP4, "running: %s", cmd_str);
  	g_free (cmd_str);
  
@@ -75,3 +75,6 @@ Index: network-manager/src/dhcp-manager/nm-dhcp-dhcpcd.c
  	                    &dhcpcd_child_setup, NULL, &pid, &error)) {
  		nm_log_warn (LOGD_DHCP4, "dhcpcd failed to start.  error: '%s'", error->message);
  		g_error_free (error);
+-- 
+2.1.3
+

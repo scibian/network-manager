@@ -52,6 +52,8 @@ typedef struct
 {
 	GHashTable *config;
 	GHashTable *blobs;
+	char       *pkcs11_engine_path;
+	char       *pkcs11_module_path;
 	guint32    ap_scan;
 	gboolean   fast_required;
 	gboolean   dispose_has_run;
@@ -89,6 +91,8 @@ nm_supplicant_config_init (NMSupplicantConfig * self)
 	                                     (GDestroyNotify) g_free,
 	                                     (GDestroyNotify) blob_free);
 
+	priv->pkcs11_engine_path = NULL;
+	priv->pkcs11_module_path = NULL;
 	priv->ap_scan = 1;
 	priv->dispose_has_run = FALSE;
 }
@@ -214,9 +218,13 @@ nm_supplicant_config_add_blob (NMSupplicantConfig *self,
 static void
 nm_supplicant_config_finalize (GObject *object)
 {
+	NMSupplicantConfigPrivate *priv = NM_SUPPLICANT_CONFIG_GET_PRIVATE (object);
+
 	/* Complete object destruction */
-	g_hash_table_destroy (NM_SUPPLICANT_CONFIG_GET_PRIVATE (object)->config);
-	g_hash_table_destroy (NM_SUPPLICANT_CONFIG_GET_PRIVATE (object)->blobs);
+	g_hash_table_destroy (priv->config);
+	g_hash_table_destroy (priv->blobs);
+	g_free (priv->pkcs11_engine_path);
+	g_free (priv->pkcs11_module_path);
 
 	/* Chain up to the parent class */
 	G_OBJECT_CLASS (nm_supplicant_config_parent_class)->finalize (object);
@@ -231,6 +239,48 @@ nm_supplicant_config_class_init (NMSupplicantConfigClass *klass)
 	object_class->finalize = nm_supplicant_config_finalize;
 
 	g_type_class_add_private (object_class, sizeof (NMSupplicantConfigPrivate));
+}
+
+const char *
+nm_supplicant_config_get_pkcs11_engine_path (NMSupplicantConfig * self)
+{
+	g_return_val_if_fail (NM_IS_SUPPLICANT_CONFIG (self), NULL);
+
+	return NM_SUPPLICANT_CONFIG_GET_PRIVATE (self)->pkcs11_engine_path;
+}
+
+void
+nm_supplicant_config_set_pkcs11_engine_path (NMSupplicantConfig * self,
+											 const char *pkcs11_engine_path)
+{
+	NMSupplicantConfigPrivate *priv;
+
+	g_return_if_fail (NM_IS_SUPPLICANT_CONFIG (self));
+
+	priv = NM_SUPPLICANT_CONFIG_GET_PRIVATE (self);
+	g_free (priv->pkcs11_engine_path);
+	priv->pkcs11_engine_path = g_strdup (pkcs11_engine_path);
+}
+
+const char *
+nm_supplicant_config_get_pkcs11_module_path (NMSupplicantConfig * self)
+{
+	g_return_val_if_fail (NM_IS_SUPPLICANT_CONFIG (self), NULL);
+
+	return NM_SUPPLICANT_CONFIG_GET_PRIVATE (self)->pkcs11_module_path;
+}
+
+void
+nm_supplicant_config_set_pkcs11_module_path (NMSupplicantConfig * self,
+											 const char *pkcs11_module_path)
+{
+	NMSupplicantConfigPrivate *priv;
+
+	g_return_if_fail (NM_IS_SUPPLICANT_CONFIG (self));
+
+	priv = NM_SUPPLICANT_CONFIG_GET_PRIVATE (self);
+	g_free (priv->pkcs11_module_path);
+	priv->pkcs11_module_path = g_strdup (pkcs11_module_path);
 }
 
 guint32
@@ -1051,6 +1101,72 @@ nm_supplicant_config_add_setting_8021x (NMSupplicantConfig *self,
 	value = nm_setting_802_1x_get_anonymous_identity (setting);
 	if (!add_string_val (self, value, "anonymous_identity", FALSE, FALSE))
 		return FALSE;
+
+	/**
+	 * PKCS #11 OpenSSL engine:
+	 * For a description of the fields see the eap_config and eap_peer_config
+	 * struct reference of wpa_supplicant:
+	 * http://hostap.epitest.fi/wpa_supplicant/devel/structeap__config.html
+	 * http://hostap.epitest.fi/wpa_supplicant/devel/structeap__peer__config.html
+	 */
+	if (nm_setting_802_1x_get_engine (setting)) {
+		const char *pkcs11_engine_path = nm_setting_802_1x_get_pkcs11_engine_path (setting);
+		const char *pkcs11_module_path = nm_setting_802_1x_get_pkcs11_module_path (setting);
+
+		/* Add engine=1 and engine_id="pkcs11" to the network config */
+		if (!nm_supplicant_config_add_option (self, "engine", "1", -1, FALSE)) {
+			nm_log_warn (LOGD_SUPPLICANT,
+						 "Error adding engine=1 to WPA supplicant network "
+						 "config.");
+			return FALSE;
+		}
+		if (!add_string_val (self, "pkcs11", "engine_id", FALSE, FALSE)) {
+			nm_log_warn (LOGD_SUPPLICANT,
+						 "Error adding engine_id=\"pkcs11\" to WPA supplicant "
+						 "network config.");
+			return FALSE;
+		}
+
+		/* Add key_id, cert_id and ca_cert_id if they are set */
+		value = nm_setting_802_1x_get_key_id (setting);
+		if (value)
+			if (!add_string_val (self, value, "key_id", FALSE, FALSE)) {
+				nm_log_warn (LOGD_SUPPLICANT,
+							 "Error adding key_id=\"%s\" to WPA supplicant "
+							 "network config.",
+							 value);
+				return FALSE;
+			}
+		value = nm_setting_802_1x_get_cert_id (setting);
+		if (value)
+			if (!add_string_val (self, value, "cert_id", FALSE, FALSE)) {
+				nm_log_warn (LOGD_SUPPLICANT,
+							 "Error adding cert_id=\"%s\" to WPA supplicant "
+							 "network config.",
+							 value);
+				return FALSE;
+			}
+		value = nm_setting_802_1x_get_ca_cert_id (setting);
+		if (value)
+			if (!add_string_val (self, value, "ca_cert_id", FALSE, FALSE)) {
+				nm_log_warn (LOGD_SUPPLICANT,
+							 "Error adding ca_cert_id=\"%s\" to WPA "
+							 "supplicant network config.",
+							 value);
+				return FALSE;
+			}
+
+		/**
+		 * Pass through pkcs11_engine_path and pkcs11_module_path to WPA
+		 * supplicant interface config as these values are not part of the
+		 * network config but will be set directly via the D-Bus
+		 * Interface.SetPKCS11EngineAndModulePath method.
+		 */
+		if (pkcs11_engine_path && pkcs11_module_path) {
+			nm_supplicant_config_set_pkcs11_engine_path (self, pkcs11_engine_path);
+			nm_supplicant_config_set_pkcs11_module_path (self, pkcs11_module_path);
+		}
+	}
 
 	return TRUE;
 }

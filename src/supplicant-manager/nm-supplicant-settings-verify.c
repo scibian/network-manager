@@ -86,6 +86,7 @@ const char * phase2_allowed[] =   {"auth=PAP", "auth=CHAP", "auth=MSCHAP",
                                    "auth=MD5", "auth=TLS", "autheap=MD5",
                                    "autheap=MSCHAPV2", "autheap=OTP",
                                    "autheap=GTC", "autheap=TLS", NULL };
+const char * engine_id_allowed[] = { "pkcs11", NULL };
 
 static const struct Opt opt_table[] = {
 	{ "ssid",               TYPE_BYTES,   0, 32,FALSE,  NULL },
@@ -131,8 +132,10 @@ static const struct Opt opt_table[] = {
 	{ "eappsk",             TYPE_BYTES,   0, 0, FALSE,  NULL },
 	{ "pac_file",           TYPE_BYTES,   0, 0, FALSE,  NULL },
 	{ "engine",             TYPE_INT,     0, 1, FALSE,  NULL },
-	{ "engine_id",          TYPE_BYTES,   0, 0, FALSE,  NULL },
+	{ "engine_id",          TYPE_KEYWORD, 0, 0, FALSE,  engine_id_allowed },
 	{ "key_id",             TYPE_BYTES,   0, 0, FALSE,  NULL },
+	{ "cert_id",            TYPE_BYTES,   0, 0, FALSE,  NULL },
+	{ "ca_cert_id",         TYPE_BYTES,   0, 0, FALSE,  NULL },
 	{ "fragment_size",      TYPE_INT,     1, 2000, FALSE,  NULL },
 	{ "proactive_key_caching", TYPE_INT,  0, 1, FALSE,  NULL },
 	{ "bgscan",             TYPE_BYTES,   0, 0, FALSE,  NULL },
